@@ -119,12 +119,9 @@
             document.getElementById('tokenAmount').innerText = `Tokens you will receive: ${xrp * tokenRate}`;
         });
 
-        // Function to convert text to hex (for memo field)
-        function textToHex(str) {
-            return Array.from(str)
-                .map(c => c.charCodeAt(0).toString(16).padStart(2, '0'))
-                .join('')
-                .toUpperCase();
+        // Function to convert JSON to Hex (for memo field)
+        function jsonToHex(json) {
+            return Buffer.from(JSON.stringify(json)).toString('hex').toUpperCase();
         }
 
         // Generate QR code for payment and show modal
@@ -143,11 +140,18 @@
             }
 
             // Convert XRP to drops (1 XRP = 1,000,000 drops)
-            const xrpInDrops = Math.round(xrpAmount * 1);
+            const xrpInDrops = Math.round(xrpAmount * 1_000_000);
 
-            // Define the memo field (UTF-8 hex encoded)
-            const memoText = "VALX PRESALE";
-            const memoHex = textToHex(memoText);
+            // Define the memo field as JSON (proper XRPL format)
+            const memoData = {
+                Memo: {
+                    MemoType: jsonToHex("text"),
+                    MemoData: jsonToHex("VALX PRESALE")
+                }
+            };
+
+            // Convert JSON to hex
+            const memoHex = jsonToHex(memoData);
 
             // Generate the XRPL payment URI with the memo
             const paymentURI = `xrpl:${sellerWalletAddress}?amount=${xrpInDrops}&memo=${memoHex}`;
@@ -169,4 +173,3 @@
     </script>
 </body>
 </html>
-
