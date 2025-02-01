@@ -96,11 +96,11 @@
     </div>
 
     <footer>
-        <p>&copy; 2025 ValX Presale Event ! All rights reserved.</p>
+        <p>&copy; 2025 ValX Presale Event !  All rights reserved.</p>
     </footer>
 
     <script>
-        const tokenRate = 3333.33; // Number of tokens per XRP
+        const tokenRate = 3333.33 ; // Number of tokens per XRP
         const sellerWalletAddress = "r3fxHfL5HSnMhPHtw6i7nrCQEABYk3m3Y5"; // Replace with your wallet address
         const maxXrp = 100; // Maximum allowed XRP per buy
 
@@ -119,15 +119,6 @@
             document.getElementById('tokenAmount').innerText = `Tokens you will receive: ${xrp * tokenRate}`;
         });
 
-        // Function to convert JSON to Hex (for memo field)
-        function jsonToHex(json) {
-            const str = JSON.stringify(json);
-            return Array.from(new TextEncoder().encode(str))
-                .map(byte => byte.toString(16).padStart(2, '0'))
-                .join('')
-                .toUpperCase();
-        }
-
         // Generate QR code for payment and show modal
         function generateQRCode() {
             const xrpAmount = parseFloat(document.getElementById('xrpAmount').value);
@@ -144,30 +135,14 @@
             }
 
             // Convert XRP to drops (1 XRP = 1,000,000 drops)
-            const xrpInDrops = Math.round(xrpAmount * 1_000_000);
+            const xrpInDrops = Math.round(xrpAmount * 1);
 
-            // Define the memo field as JSON (proper XRPL format)
-            const memoData = {
-                Memo: {
-                    MemoType: jsonToHex("text"),
-                    MemoData: jsonToHex("VALX PRESALE")
-                }
-            };
-
-            // Convert JSON to hex
-            const memoHex = jsonToHex(memoData);
-
-            // Generate the XRPL payment URI with the memo
-            const paymentURI = `xrpl:${sellerWalletAddress}?amount=${xrpInDrops}&memo=${memoHex}`;
+            // Generate the XRPL payment URI
+            const paymentURI = `xrpl:${sellerWalletAddress}?amount=${xrpInDrops}`;
 
             // Display QR code in modal
             const qrCanvas = document.getElementById('qrcode');
-            QRCode.toCanvas(qrCanvas, paymentURI, { width: 200 }, function(error) {
-                if (error) {
-                    console.error("QR Code generation failed:", error);
-                    alert("Error generating QR code. Please try again.");
-                }
-            });
+            QRCode.toCanvas(qrCanvas, paymentURI, { width: 200 });
 
             // Show modal
             document.getElementById('qrModal').style.display = 'block';
@@ -182,3 +157,5 @@
     </script>
 </body>
 </html>
+
+Make sure the public memo in the xaman transaction VALX PRESALE IS ADDED
