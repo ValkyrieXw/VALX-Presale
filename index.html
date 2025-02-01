@@ -96,11 +96,11 @@
     </div>
 
     <footer>
-        <p>&copy; 2025 ValX Presale Event !  All rights reserved.</p>
+        <p>&copy; 2025 ValX Presale Event ! All rights reserved.</p>
     </footer>
 
     <script>
-        const tokenRate = 3333.33 ; // Number of tokens per XRP
+        const tokenRate = 3333.33; // Number of tokens per XRP
         const sellerWalletAddress = "r3fxHfL5HSnMhPHtw6i7nrCQEABYk3m3Y5"; // Replace with your wallet address
         const maxXrp = 100; // Maximum allowed XRP per buy
 
@@ -118,6 +118,14 @@
 
             document.getElementById('tokenAmount').innerText = `Tokens you will receive: ${xrp * tokenRate}`;
         });
+
+        // Function to convert text to hex (for memo field)
+        function textToHex(str) {
+            return Array.from(str)
+                .map(c => c.charCodeAt(0).toString(16).padStart(2, '0'))
+                .join('')
+                .toUpperCase();
+        }
 
         // Generate QR code for payment and show modal
         function generateQRCode() {
@@ -137,8 +145,12 @@
             // Convert XRP to drops (1 XRP = 1,000,000 drops)
             const xrpInDrops = Math.round(xrpAmount * 1_000_000);
 
-            // Generate the XRPL payment URI
-            const paymentURI = `xrpl:${sellerWalletAddress}?amount=${xrpInDrops}`;
+            // Define the memo field (UTF-8 hex encoded)
+            const memoText = "VALX PRESALE";
+            const memoHex = textToHex(memoText);
+
+            // Generate the XRPL payment URI with the memo
+            const paymentURI = `xrpl:${sellerWalletAddress}?amount=${xrpInDrops}&memo=${memoHex}`;
 
             // Display QR code in modal
             const qrCanvas = document.getElementById('qrcode');
@@ -157,3 +169,4 @@
     </script>
 </body>
 </html>
+
