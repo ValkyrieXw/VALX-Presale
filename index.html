@@ -1,182 +1,85 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ValX Presale Event !</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
-    <style>
-        body {
-            background: url('https://github.com/ValkyrieXw/VALX-Presale/blob/main/B155D72D-843D-4E6D-B8F6-DF40D161C5CF.jpeg?raw=true') no-repeat center center fixed;
-            background-size: cover;
-            color: white;
-            font-family: Arial, sans-serif;
+<script>
+    const tokenRate = 3333.33; // Number of tokens per XRP
+    const sellerWalletAddress = "r3fxHfL5HSnMhPHtw6i7nrCQEABYk3m3Y5"; // Replace with actual wallet
+    const xrpWebsocket = "wss://xrplcluster.com"; // XRPL WebSocket API
+
+    document.getElementById('xrpAmount').addEventListener('input', (e) => {
+        const xrp = parseFloat(e.target.value) || 0;
+        document.getElementById('tokenAmount').innerText = `Tokens you will receive: ${xrp * tokenRate}`;
+    });
+
+    function generateQRCode() {
+        const xrpAmount = parseFloat(document.getElementById('xrpAmount').value);
+
+        if (!xrpAmount || xrpAmount <= 0) {
+            alert("Please enter a valid XRP amount.");
+            return;
         }
 
-        main {
-            background: rgba(0, 0, 0, 0.8);
-            border-radius: 10px;
-            padding: 2rem;
-            max-width: 600px;
-            margin: auto;
-            margin-top: 5rem;
-            color: white;
-        }
+        const xrpInDrops = Math.round(xrpAmount * 1_000_000); // Convert XRP to drops
 
-        header, footer {
-            text-align: center;
-            margin-bottom: 2rem;
-            color: white;
-        }
+        // XRPL Payment URI with Memo (for Xaman compatibility)
+        const paymentURI = `xrpl:${sellerWalletAddress}?amount=${xrpInDrops}&dt=0&memo=VALX%20Presale`;
 
-        h1 {
-            font-size: 2.5rem;
-            margin-bottom: 0.5rem;
-        }
+        // Generate QR Code
+        const qrCanvas = document.getElementById('qrcode');
+        QRCode.toCanvas(qrCanvas, paymentURI, { width: 200 });
 
-        #qrModal {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: white;
-            padding: 2rem;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-            display: none;
-            z-index: 1000;
-            text-align: center;
-        }
+        // Show modal
+        document.getElementById('qrModal').style.display = 'block';
+        document.getElementById('qrModalOverlay').style.display = 'block';
 
-        #qrModal canvas {
-            margin: 1rem 0;
-        }
+        // Start listening for transaction confirmation
+        listenForTransaction(xrpInDrops);
+    }
 
-        #qrModalOverlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            display: none;
-            z-index: 999;
-        }
+    function closeModal() {
+        document.getElementById('qrModal').style.display = 'none';
+        document.getElementById('qrModalOverlay').style.display = 'none';
+    }
 
-        button {
-            cursor: pointer;
-        }
-    </style>
-</head>
-<body>
-    <header>
-        <h1>ValX Presale Event!</h1>
-        <p>Buy tokens securely using XRP. Maximum limit: 100 XRP per transaction.</p>
-    </header>
+    function listenForTransaction(amountInDrops) {
+        const ws = new WebSocket(xrpWebsocket);
 
-    <main>
-        <form id="presaleForm">
-            <label for="xrpAmount"><strong>Amount of XRP:</strong></label>
-            <input type="number" id="xrpAmount" name="xrpAmount" placeholder="Enter XRP amount (max 100)" required>
-            <p id="tokenAmount">Tokens you will receive: <strong>0</strong></p>
-            <button type="button" onclick="generateQRCode()">Generate QR Code</button>
-        </form>
-    </main>
+        ws.onopen = () => {
+            console.log("Connected to XRPL WebSocket");
 
-    <!-- Modal overlay -->
-    <div id="qrModalOverlay" onclick="closeModal()"></div>
+            // Subscribe to transactions for this wallet
+            const subscribeMessage = {
+                "command": "subscribe",
+                "accounts": [sellerWalletAddress]
+            };
+            ws.send(JSON.stringify(subscribeMessage));
+        };
 
-    <!-- QR code modal -->
-    <div id="qrModal">
-        <h2>Payment QR Code</h2>
-        <p>Scan this QR code to complete your payment:</p>
-        <canvas id="qrcode"></canvas>
-        <button onclick="openXamanApp()">Pay with Xaman</button>
-        <button onclick="closeModal()">Close</button>
-    </div>
+        ws.onmessage = (event) => {
+            const data = JSON.parse(event.data);
 
-    <footer>
-        <p>&copy; 2025 ValX Presale Event! All rights reserved.</p>
-    </footer>
+            if (data.type === "transaction" && data.transaction) {
+                const tx = data.transaction;
+                
+                if (tx.TransactionType === "Payment" &&
+                    tx.Destination === sellerWalletAddress &&
+                    tx.Amount === amountInDrops.toString() &&
+                    tx.Memos &&
+                    tx.Memos[0].Memo.MemoData === toHex("VALX Presale")) {
 
-    <script>
-        const tokenRate = 3333.33; // Number of tokens per XRP
-        const sellerWalletAddress = "r3fxHfL5HSnMhPHtw6i7nrCQEABYk3m3Y5"; // Replace with your wallet address
-        const maxXrp = 100; // Maximum allowed XRP per buy
-
-        // Update token amount dynamically and check for limits
-        document.getElementById('xrpAmount').addEventListener('input', (e) => {
-            const xrp = parseFloat(e.target.value) || 0;
-
-            // If XRP exceeds limit, reset the field and alert the user
-            if (xrp > maxXrp) {
-                alert(`The maximum allowed amount is ${maxXrp} XRP.`);
-                e.target.value = '';
-                document.getElementById('tokenAmount').innerText = `Tokens you will receive: 0`;
-                return;
+                    alert("Transaction Confirmed! Thank you for purchasing VALX.");
+                    ws.close();
+                }
             }
+        };
 
-            document.getElementById('tokenAmount').innerText = `Tokens you will receive: ${xrp * tokenRate}`;
-        });
+        ws.onerror = (error) => {
+            console.error("XRPL WebSocket Error:", error);
+        };
 
-        // Generate QR code for payment and show modal
-        function generateQRCode() {
-            const xrpAmount = parseFloat(document.getElementById('xrpAmount').value);
+        ws.onclose = () => {
+            console.log("Disconnected from XRPL WebSocket");
+        };
+    }
 
-            if (!xrpAmount || xrpAmount <= 0) {
-                alert("Please enter a valid XRP amount.");
-                return;
-            }
-
-            // If XRP exceeds the limit, block the transaction
-            if (xrpAmount > maxXrp) {
-                alert(`The maximum allowed amount is ${maxXrp} XRP. Please adjust your input.`);
-                return;
-            }
-
-            // Convert XRP to drops (1 XRP = 1,000,000 drops)
-            const xrpInDrops = Math.round(xrpAmount * 1_000_000);
-
-            // Generate the XRPL payment URI
-            const paymentURI = `xrpl:${sellerWalletAddress}?amount=${xrpInDrops}`;
-
-            // Display QR code in modal
-            const qrCanvas = document.getElementById('qrcode');
-            QRCode.toCanvas(qrCanvas, paymentURI, { width: 200 });
-
-            // Show modal
-            document.getElementById('qrModal').style.display = 'block';
-            document.getElementById('qrModalOverlay').style.display = 'block';
-        }
-
-        // Open Xaman app for payment
-        function openXamanApp() {
-            const xrpAmount = parseFloat(document.getElementById('xrpAmount').value);
-
-            if (!xrpAmount || xrpAmount <= 0) {
-                alert("Please enter a valid XRP amount.");
-                return;
-            }
-
-            if (xrpAmount > maxXrp) {
-                alert(`The maximum allowed amount is ${maxXrp} XRP. Please adjust your input.`);
-                return;
-            }
-
-            // Convert XRP to drops (1 XRP = 1,000,000 drops)
-            const xrpInDrops = Math.round(xrpAmount * 1);
-            const paymentURI = `xrpl:${sellerWalletAddress}?amount=${xrpInDrops}`;
-
-            // Attempt to open the Xaman app
-            window.location.href = paymentURI;
-        }
-
-        // Close modal
-        function closeModal() {
-            document.getElementById('qrModal').style.display = 'none';
-            document.getElementById('qrModalOverlay').style.display = 'none';
-        }
-    </script>
-</body>
-</html>
+    function toHex(str) {
+        return Array.from(str).map(c => c.charCodeAt(0).toString(16).padStart(2, '0')).join('').toUpperCase();
+    }
+</script>
