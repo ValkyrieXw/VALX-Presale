@@ -1,85 +1,191 @@
-<script>
-    const tokenRate = 3333.33; // Number of tokens per XRP
-    const sellerWalletAddress = "r3fxHfL5HSnMhPHtw6i7nrCQEABYk3m3Y5"; // Replace with actual wallet
-    const xrpWebsocket = "wss://xrplcluster.com"; // XRPL WebSocket API
-
-    document.getElementById('xrpAmount').addEventListener('input', (e) => {
-        const xrp = parseFloat(e.target.value) || 0;
-        document.getElementById('tokenAmount').innerText = `Tokens you will receive: ${xrp * tokenRate}`;
-    });
-
-    function generateQRCode() {
-        const xrpAmount = parseFloat(document.getElementById('xrpAmount').value);
-
-        if (!xrpAmount || xrpAmount <= 0) {
-            alert("Please enter a valid XRP amount.");
-            return;
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ValX Presale Event</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+    <style>
+        /* Set the background image */
+        body {
+            background: url('https://github.com/ValkyrieXw/VALX-Presale/blob/main/B155D72D-843D-4E6D-B8F6-DF40D161C5CF.jpeg?raw=true') no-repeat center center fixed;
+            background-size: cover;
+            color: white;
+            font-family: Arial, sans-serif;
         }
 
-        const xrpInDrops = Math.round(xrpAmount * 1_000_000); // Convert XRP to drops
+        main {
+            background: rgba(0, 0, 0, 0.8);
+            border-radius: 10px;
+            padding: 2rem;
+            max-width: 600px;
+            margin: auto;
+            margin-top: 5rem;
+            color: white;
+        }
 
-        // XRPL Payment URI with Memo (for Xaman compatibility)
-        const paymentURI = `xrpl:${sellerWalletAddress}?amount=${xrpInDrops}&dt=0&memo=VALX%20Presale`;
+        header, footer {
+            text-align: center;
+            margin-bottom: 2rem;
+            color: white;
+        }
 
-        // Generate QR Code
-        const qrCanvas = document.getElementById('qrcode');
-        QRCode.toCanvas(qrCanvas, paymentURI, { width: 200 });
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
 
-        // Show modal
-        document.getElementById('qrModal').style.display = 'block';
-        document.getElementById('qrModalOverlay').style.display = 'block';
+        #qrModal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            display: none;
+            z-index: 1000;
+            text-align: center;
+        }
 
-        // Start listening for transaction confirmation
-        listenForTransaction(xrpInDrops);
-    }
+        #qrModal canvas {
+            margin: 1rem 0;
+        }
 
-    function closeModal() {
-        document.getElementById('qrModal').style.display = 'none';
-        document.getElementById('qrModalOverlay').style.display = 'none';
-    }
+        #qrModalOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            z-index: 999;
+        }
 
-    function listenForTransaction(amountInDrops) {
-        const ws = new WebSocket(xrpWebsocket);
+        button {
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>ValX Presale Event</h1>
+        <p>Buy ValX securely using XRP.</p>
+    </header>
 
-        ws.onopen = () => {
-            console.log("Connected to XRPL WebSocket");
+    <main>
+        <form id="presaleForm">
+            <label for="xrpAmount"><strong>Amount of XRP:</strong></label>
+            <input type="number" id="xrpAmount" name="xrpAmount" placeholder="Enter XRP amount" required>
+            <p id="tokenAmount">Tokens you will receive: <strong>0</strong></p>
+            <button type="button" onclick="generateQRCode()">Generate QR Code</button>
+        </form>
+    </main>
 
-            // Subscribe to transactions for this wallet
-            const subscribeMessage = {
-                "command": "subscribe",
-                "accounts": [sellerWalletAddress]
-            };
-            ws.send(JSON.stringify(subscribeMessage));
-        };
+    <!-- Modal overlay -->
+    <div id="qrModalOverlay" onclick="closeModal()"></div>
 
-        ws.onmessage = (event) => {
-            const data = JSON.parse(event.data);
+    <!-- QR code modal -->
+    <div id="qrModal">
+        <h2>Payment QR Code</h2>
+        <p>Scan this QR code to complete your payment:</p>
+        <canvas id="qrcode"></canvas>
+        <p id="statusMessage">Waiting for payment confirmation...</p>
+        <button onclick="closeModal()">Close</button>
+    </div>
 
-            if (data.type === "transaction" && data.transaction) {
-                const tx = data.transaction;
-                
-                if (tx.TransactionType === "Payment" &&
-                    tx.Destination === sellerWalletAddress &&
-                    tx.Amount === amountInDrops.toString() &&
-                    tx.Memos &&
-                    tx.Memos[0].Memo.MemoData === toHex("VALX Presale")) {
+    <footer>
+        <p>&copy; 2025 VALX Presale. All rights reserved.</p>
+    </footer>
 
-                    alert("Transaction Confirmed! Thank you for purchasing VALX.");
-                    ws.close();
-                }
+    <script>
+        const tokenRate = 3333.33; // Number of tokens per XRP
+        const sellerWalletAddress = "r3fxHfL5HSnMhPHtw6i7nrCQEABYk3m3Y5"; // Replace with actual wallet
+        const xrpWebsocket = "wss://xrplcluster.com"; // XRPL WebSocket API
+
+        document.getElementById('xrpAmount').addEventListener('input', (e) => {
+            const xrp = parseFloat(e.target.value) || 0;
+            document.getElementById('tokenAmount').innerText = `Tokens you will receive: ${xrp * tokenRate}`;
+        });
+
+        function generateQRCode() {
+            const xrpAmount = parseFloat(document.getElementById('xrpAmount').value);
+
+            if (!xrpAmount || xrpAmount <= 0) {
+                alert("Please enter a valid XRP amount.");
+                return;
             }
-        };
 
-        ws.onerror = (error) => {
-            console.error("XRPL WebSocket Error:", error);
-        };
+            const xrpInDrops = Math.round(xrpAmount * 1_000_000); // Convert XRP to drops
 
-        ws.onclose = () => {
-            console.log("Disconnected from XRPL WebSocket");
-        };
-    }
+            // XRPL Payment URI with Memo (for Xaman compatibility)
+            const paymentURI = `xrpl:${sellerWalletAddress}?amount=${xrpInDrops}&dt=0&memo=VALX%20Presale`;
 
-    function toHex(str) {
-        return Array.from(str).map(c => c.charCodeAt(0).toString(16).padStart(2, '0')).join('').toUpperCase();
-    }
-</script>
+            // Generate QR Code
+            const qrCanvas = document.getElementById('qrcode');
+            QRCode.toCanvas(qrCanvas, paymentURI, { width: 200 });
+
+            // Show modal
+            document.getElementById('qrModal').style.display = 'block';
+            document.getElementById('qrModalOverlay').style.display = 'block';
+            document.getElementById('statusMessage').innerText = "Waiting for payment confirmation...";
+
+            // Start listening for transaction confirmation
+            listenForTransaction(xrpInDrops);
+        }
+
+        function closeModal() {
+            document.getElementById('qrModal').style.display = 'none';
+            document.getElementById('qrModalOverlay').style.display = 'none';
+        }
+
+        function listenForTransaction(amountInDrops) {
+            const ws = new WebSocket(xrpWebsocket);
+
+            ws.onopen = () => {
+                console.log("Connected to XRPL WebSocket");
+
+                // Subscribe to transactions for this wallet
+                const subscribeMessage = {
+                    "command": "subscribe",
+                    "accounts": [sellerWalletAddress]
+                };
+                ws.send(JSON.stringify(subscribeMessage));
+            };
+
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+
+                if (data.type === "transaction" && data.transaction) {
+                    const tx = data.transaction;
+                    
+                    if (tx.TransactionType === "Payment" &&
+                        tx.Destination === sellerWalletAddress &&
+                        tx.Amount === amountInDrops.toString() &&
+                        tx.Memos &&
+                        tx.Memos[0].Memo.MemoData === toHex("VALX Presale")) {
+
+                        document.getElementById('statusMessage').innerText = "✅ Payment confirmed! Thank you for purchasing VALX.";
+                        ws.close();
+                    }
+                }
+            };
+
+            ws.onerror = (error) => {
+                console.error("XRPL WebSocket Error:", error);
+            };
+
+            ws.onclose = () => {
+                console.log("Disconnected from XRPL WebSocket");
+            };
+        }
+
+        function toHex(str) {
+            return Array.from(str).map(c => c.charCodeAt(0).toString(16).padStart(2, '0')).join('').toUpperCase();
+        }
+    </script>
+</body>
+</html>
