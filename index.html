@@ -7,23 +7,13 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css">
     <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
     <style>
-        /* Ensure full-page display */
-        html, body {
-            height: 100%;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-        }
-
-        /* Background settings */
         body {
             background: url('https://github.com/ValkyrieXw/VALX-Presale/blob/main/B155D72D-843D-4E6D-B8F6-DF40D161C5CF.jpeg?raw=true') no-repeat center center fixed;
             background-size: cover;
             color: white;
             font-family: Arial, sans-serif;
+            text-align: center;
+            padding-top: 20px;
         }
 
         main {
@@ -31,20 +21,19 @@
             border-radius: 10px;
             padding: 2rem;
             max-width: 600px;
-            text-align: center;
+            margin: auto;
+            margin-top: 2rem;
             color: white;
         }
 
         header, footer {
-            text-align: center;
             margin-bottom: 2rem;
         }
 
         h1 {
-            font-size: 2.5rem;
+            font-size: 2rem;
         }
 
-        /* Modal Styling */
         #qrModal {
             position: fixed;
             top: 50%;
@@ -69,10 +58,6 @@
             background: rgba(0, 0, 0, 0.5);
             display: none;
             z-index: 999;
-        }
-
-        button {
-            cursor: pointer;
         }
     </style>
 </head>
@@ -108,11 +93,12 @@
     </footer>
 
     <script>
-        const tokenRate = 3333.33; // Number of tokens per XRP
-        const sellerWalletAddress = "r3fxHfL5HSnMhPHtw6i7nrCQEABYk3m3Y5"; // Replace with actual wallet
-        const xrpWebsocket = "wss://xrplcluster.com"; // XRPL WebSocket API
+        console.log("🚀 Page Loaded Successfully!");
 
-        // Update token amount dynamically
+        const tokenRate = 3333.33;
+        const sellerWalletAddress = "r3fxHfL5HSnMhPHtw6i7nrCQEABYk3m3Y5";
+        const xrpWebsocket = "wss://xrplcluster.com"; 
+
         document.getElementById('xrpAmount').addEventListener('input', (e) => {
             const xrp = parseFloat(e.target.value) || 0;
             document.getElementById('tokenAmount').innerText = `Tokens you will receive: ${xrp * tokenRate}`;
@@ -126,21 +112,18 @@
                 return;
             }
 
-            const xrpInDrops = Math.round(xrpAmount * 1_000_000); // Convert XRP to drops
+            console.log(`📌 Generating QR for ${xrpAmount} XRP`);
 
-            // XRPL Payment URI with Memo (for Xaman compatibility)
+            const xrpInDrops = Math.round(xrpAmount * 1_000_000);
             const paymentURI = `xrpl:${sellerWalletAddress}?amount=${xrpInDrops}&dt=0&memo=VALX%20Presale`;
 
-            // Generate QR Code
             const qrCanvas = document.getElementById('qrcode');
             QRCode.toCanvas(qrCanvas, paymentURI, { width: 200 });
 
-            // Show modal
             document.getElementById('qrModal').style.display = 'block';
             document.getElementById('qrModalOverlay').style.display = 'block';
             document.getElementById('statusMessage').innerText = "Waiting for payment confirmation...";
 
-            // Start listening for transaction confirmation
             listenForTransaction(xrpInDrops);
         }
 
@@ -154,7 +137,97 @@
                 const ws = new WebSocket(xrpWebsocket);
 
                 ws.onopen = () => {
-                    console.log("Connected to XRPL WebSocket");
+                    console.log("✅ Connected to XRPL WebSocket");
+
+                    ws.send(JSON.stringify({
+                        "command": "subscribe",
+                        "accounts": [sellerWalletAddress]
+                    }));
+                };
+
+                ws.onmessage = (event) => {
+                    const data = JSON.parse(event.data);
+
+                    if (data.type === "transaction" && data.transaction) {
+                        const tx = data.transaction;
+
+                        if (tx.TransactionType === "Payment" &&
+                            tx.Destination === sellerWalletAddress &&
+                            tx.Amount === amountInDrops.toString() &&
+                            tx.Memos &&
+                            tx.Memos[0].Memo.MemoData === toHex("VALX Presale")) {
+
+                            document.getElementById('statusMessage').innerText = "✅ Payment confirmed
+
+The **"TypeError: null is not an object"** means that `document.getElementById('xrpAmount')` is returning `null`, which happens when **JavaScript runs before the page finishes loading**.
+
+---
+
+### ✅ **Fix: Ensure JavaScript Runs After the Page Loads**
+Wrap your script inside `window.onload` to **ensure that the DOM is fully loaded** before trying to access elements.
+
+### **Fixed Code**
+```html
+<script>
+    window.onload = function () {
+        console.log("🚀 Page Loaded Successfully!");
+
+        const tokenRate = 3333.33;
+        const sellerWalletAddress = "r3fxHfL5HSnMhPHtw6i7nrCQEABYk3m3Y5";
+        const xrpWebsocket = "wss://xrplcluster.com"; 
+
+        // Ensure elements exist before attaching event listeners
+        const xrpInput = document.getElementById('xrpAmount');
+        const tokenAmountDisplay = document.getElementById('tokenAmount');
+
+        if (xrpInput && tokenAmountDisplay) {
+            xrpInput.addEventListener('input', (e) => {
+                const xrp = parseFloat(e.target.value) || 0;
+                tokenAmountDisplay.innerText = `Tokens you will receive: ${xrp * tokenRate}`;
+            });
+        } else {
+            console.error("❌ Element not found: #xrpAmount or #tokenAmount");
+        }
+
+        window.generateQRCode = function () {
+            const xrpAmount = parseFloat(xrpInput.value);
+
+            if (!xrpAmount || xrpAmount <= 0) {
+                alert("Please enter a valid XRP amount.");
+                return;
+            }
+
+            console.log(`📌 Generating QR for ${xrpAmount} XRP`);
+
+            const xrpInDrops = Math.round(xrpAmount * 1_000_000);
+            const paymentURI = `xrpl:${sellerWalletAddress}?amount=${xrpInDrops}&dt=0&memo=VALX%20Presale`;
+
+            const qrCanvas = document.getElementById('qrcode');
+            if (qrCanvas) {
+                QRCode.toCanvas(qrCanvas, paymentURI, { width: 200 });
+            } else {
+                console.error("❌ Element not found: #qrcode");
+            }
+
+            document.getElementById('qrModal').style.display = 'block';
+            document.getElementById('qrModalOverlay').style.display = 'block';
+            document.getElementById('statusMessage').innerText = "Waiting for payment confirmation...";
+
+            listenForTransaction(xrpInDrops);
+        };
+
+        window.closeModal = function () {
+            document.getElementById('qrModal').style.display = 'none';
+            document.getElementById('qrModalOverlay').style.display = 'none';
+        };
+
+        function listenForTransaction(amountInDrops) {
+            try {
+                const ws = new WebSocket(xrpWebsocket);
+
+                ws.onopen = () => {
+                    console.log("✅ Connected to XRPL WebSocket");
+
                     ws.send(JSON.stringify({
                         "command": "subscribe",
                         "accounts": [sellerWalletAddress]
@@ -184,16 +257,15 @@
                 };
 
                 ws.onclose = () => {
-                    console.log("Disconnected from XRPL WebSocket");
+                    console.log("🔴 Disconnected from XRPL WebSocket");
                 };
             } catch (error) {
-                console.error("WebSocket failed to initialize:", error);
+                console.error("❌ WebSocket failed to initialize:", error);
             }
         }
 
         function toHex(str) {
             return Array.from(str).map(c => c.charCodeAt(0).toString(16).padStart(2, '0')).join('').toUpperCase();
         }
-    </script>
-</body>
-</html>
+    };
+</script>
