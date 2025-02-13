@@ -95,7 +95,6 @@
         <canvas id="qrcode"></canvas>
         <button onclick="openXamanApp()">Pay with Xaman</button>
         <button onclick="openGemWallet()">Pay with GemWallet</button>
-        <button onclick="openFirstLedger()">Pay with FirstLedger</button>
         <button onclick="closeModal()">Close</button>
     </div>
 
@@ -156,31 +155,60 @@
         // Open GemWallet for payment
         async function openGemWallet() {
             const xrpAmount = parseFloat(document.getElementById('xrpAmount').value);
-            const xrpInDrops = (xrpAmount * 1_000_000).toString();
 
-            if (!await window.GemWalletApi.isInstalled()) {
-                alert("GemWallet is not installed. Please install it to proceed.");
+            if (!xrpAmount || xrpAmount <= 0) {
+                alert("Please enter a valid XRP amount.");
                 return;
             }
 
-            const response = await window.GemWalletApi.sendPayment({
-                amount: xrpInDrops,
-                destination: sellerWalletAddress
-            });
-
-            if (response && response.hash) {
-                alert(`Payment successful! Transaction hash: ${response.hash}`);
-            } else {
-                alert("Payment failed or was rejected.");
+            if (xrpAmount > maxXrp) {
+                alert(`The maximum allowed amount is ${maxXrp} XRP. Please adjust your input.`);
+                return;
             }
-        }
 
-        // Open FirstLedger for payment
-        function openFirstLedger() {
-            const xrpAmount = parseFloat(document.getElementById('xrpAmount').value);
-            const xrpInDrops = Math.round(xrpAmount * 1_000_000);
-            const paymentURI = `xrpl:${sellerWalletAddress}?amount=${xrpInDrops}`;
-            window.location.href = paymentURI;
+            // Convert XRP to drops (1 XRP = 1,000,000 drops)
+            const xrpInDrops = (xrpAmount * 1_000_000).toString();
+
+            // Check if GemWallet is connected
+            const isConnected = await window.GemWalletApi.isConnected();
+            if (!isConnected) {
+                alert("GemWallet is not connected. Please open GemWallet and try again.");
+                return;
+            }
+
+            // Define the transaction details
+            const transaction = {
+                chain: "xrp",
+                network: "MAIN", // Change to 'TEST' if using testnet
+                transaction: "payment",
+                amount: xrpInDrops,
+                destination: sellerWalletAddress,
+                token: "xrp",
+                apiVersion: 1,
+            };
+
+            // Send the transaction request
+            const status = await window.GemWalletApi.transactionRequest(transaction);
+
+            // Handle transaction status
+            switch (status) {
+                case "waiting":
+                    alert("Waiting for user confirmation in GemWallet...");
+                    break;
+                case "pending":
+                    alert("Transaction is pending. Please wait...");
+                    break;
+                case "success":
+                    alert("Transaction successful!");
+                    break;
+                case "rejected":
+                    alert("Transaction rejected by user.");
+                    break;
+                default:
+                    alert("Unknown transaction status.");
+            }
+
+            console.log(`GemWallet Transaction Status: ${status}`);
         }
 
         // Close modal
