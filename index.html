@@ -10,7 +10,7 @@
         body {
             background: url('https://github.com/ValkyrieXw/VALX-Presale/blob/main/B155D72D-843D-4E6D-B8F6-DF40D161C5CF.jpeg?raw=true') no-repeat center center;
             background-size: cover;
-            color: white;
+            color: black;
             font-family: Arial, sans-serif;
         }
 
@@ -47,6 +47,7 @@
             display: none;
             z-index: 1000;
             text-align: center;
+            color: black;
         }
 
         #qrModal canvas {
@@ -67,6 +68,21 @@
         button {
             cursor: pointer;
         }
+
+        #walletInstructions ul {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        #walletInstructions li {
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+
+        #walletInstructions p {
+            margin: 0;
+            font-size: 1.1rem;
+        }
     </style>
 </head>
 <body>
@@ -82,6 +98,23 @@
             <p id="tokenAmount">Tokens you will receive: <strong>0</strong></p>
             <button type="button" onclick="generateQRCode()">Generate QR Code</button>
         </form>
+
+        <hr>
+
+        <section id="walletInstructions">
+            <h2>📢 GEM Wallet & FirstLedger Users – How to Buy $VALX Presale! 🚀</h2>
+            <p>If you’re using GEM Wallet or FirstLedger, follow these steps to secure your $VALX presale tokens:</p>
+            <ul>
+                <li>✅ Step 1: Send XRP (max 100 XRP) to the address:</li>
+                <p><strong>📌 r3fxHfL5HSnMhPHtw6i7nrCQEABYk3m3Y5</strong></p>
+
+                <li>✅ Step 2: IMPORTANT – In the public memo, type:</li>
+                <p><strong>📝 Presale ValX</strong></p>
+
+                <li>✅ Step 3: After your transaction is complete, it will automatically appear in our #presale-info channel on Discord! 📢</li>
+            </ul>
+            <p><strong>🔥 Act fast before the presale ends! ⚔️🚀</strong></p>
+        </section>
     </main>
 
     <!-- Modal overlay -->
@@ -133,7 +166,7 @@
                 return;
             }
 
-            const xrpInDrops = Math.round(xrpAmount * 1_000_000);
+            const xrpInDrops = Math.round(xrpAmount * 1);
             const paymentURI = `xrpl:${sellerWalletAddress}?amount=${xrpInDrops}`;
 
             QRCode.toCanvas(document.getElementById('qrcode'), paymentURI, { width: 200 });
@@ -145,7 +178,7 @@
         // Open Xaman App for payment
         function openXamanApp() {
             const xrpAmount = parseFloat(document.getElementById('xrpAmount').value);
-            const xrpInDrops = Math.round(xrpAmount * 1_000_000);
+            const xrpInDrops = Math.round(xrpAmount * 1);
             const paymentURI = `xrpl:${sellerWalletAddress}?amount=${xrpInDrops}`;
             window.location.href = paymentURI;
         }
