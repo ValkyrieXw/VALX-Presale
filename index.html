@@ -6,9 +6,10 @@
     <title>ValX Presale Event!</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css">
     <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+    <script src="https://unpkg.com/@gemwallet/api@latest/umd/gemwallet-api.js"></script>
     <style>
         body {
-            background: url('https://github.com/ValkyrieXw/VALX-Presale/blob/main/B155D72D-843D-4E6D-B8F6-DF40D161C5CF.jpeg?raw=true') no-repeat center center 
+            background: url('https://github.com/ValkyrieXw/VALX-Presale/blob/main/B155D72D-843D-4E6D-B8F6-DF40D161C5CF.jpeg?raw=true') no-repeat center center;
             background-size: cover;
             color: white;
             font-family: Arial, sans-serif;
@@ -93,6 +94,8 @@
         <p>Scan this QR code to complete your payment:</p>
         <canvas id="qrcode"></canvas>
         <button onclick="openXamanApp()">Pay with Xaman</button>
+        <button onclick="openGemWallet()">Pay with GemWallet</button>
+        <button onclick="openFirstLedger()">Pay with FirstLedger</button>
         <button onclick="closeModal()">Close</button>
     </div>
 
@@ -109,7 +112,6 @@
         document.getElementById('xrpAmount').addEventListener('input', (e) => {
             const xrp = parseFloat(e.target.value) || 0;
 
-            // If XRP exceeds limit, reset the field and alert the user
             if (xrp > maxXrp) {
                 alert(`The maximum allowed amount is ${maxXrp} XRP.`);
                 e.target.value = '';
@@ -120,7 +122,7 @@
             document.getElementById('tokenAmount').innerText = `Tokens you will receive: ${xrp * tokenRate}`;
         });
 
-        // Generate QR code for payment and show modal
+        // Generate QR code for payment
         function generateQRCode() {
             const xrpAmount = parseFloat(document.getElementById('xrpAmount').value);
 
@@ -129,46 +131,55 @@
                 return;
             }
 
-            // If XRP exceeds the limit, block the transaction
             if (xrpAmount > maxXrp) {
                 alert(`The maximum allowed amount is ${maxXrp} XRP. Please adjust your input.`);
                 return;
             }
 
-            // Convert XRP to drops (1 XRP = 1,000,000 drops)
             const xrpInDrops = Math.round(xrpAmount * 1_000_000);
-
-            // Generate the XRPL payment URI
             const paymentURI = `xrpl:${sellerWalletAddress}?amount=${xrpInDrops}`;
 
-            // Display QR code in modal
-            const qrCanvas = document.getElementById('qrcode');
-            QRCode.toCanvas(qrCanvas, paymentURI, { width: 200 });
+            QRCode.toCanvas(document.getElementById('qrcode'), paymentURI, { width: 200 });
 
-            // Show modal
             document.getElementById('qrModal').style.display = 'block';
             document.getElementById('qrModalOverlay').style.display = 'block';
         }
 
-        // Open Xaman app for payment
+        // Open Xaman App for payment
         function openXamanApp() {
             const xrpAmount = parseFloat(document.getElementById('xrpAmount').value);
-
-            if (!xrpAmount || xrpAmount <= 0) {
-                alert("Please enter a valid XRP amount.");
-                return;
-            }
-
-            if (xrpAmount > maxXrp) {
-                alert(`The maximum allowed amount is ${maxXrp} XRP. Please adjust your input.`);
-                return;
-            }
-
-            // Convert XRP to drops (1 XRP = 1,000,000 drops)
-            const xrpInDrops = Math.round(xrpAmount * 1);
+            const xrpInDrops = Math.round(xrpAmount * 1_000_000);
             const paymentURI = `xrpl:${sellerWalletAddress}?amount=${xrpInDrops}`;
+            window.location.href = paymentURI;
+        }
 
-            // Attempt to open the Xaman app
+        // Open GemWallet for payment
+        async function openGemWallet() {
+            const xrpAmount = parseFloat(document.getElementById('xrpAmount').value);
+            const xrpInDrops = (xrpAmount * 1_000_000).toString();
+
+            if (!await window.GemWalletApi.isInstalled()) {
+                alert("GemWallet is not installed. Please install it to proceed.");
+                return;
+            }
+
+            const response = await window.GemWalletApi.sendPayment({
+                amount: xrpInDrops,
+                destination: sellerWalletAddress
+            });
+
+            if (response && response.hash) {
+                alert(`Payment successful! Transaction hash: ${response.hash}`);
+            } else {
+                alert("Payment failed or was rejected.");
+            }
+        }
+
+        // Open FirstLedger for payment
+        function openFirstLedger() {
+            const xrpAmount = parseFloat(document.getElementById('xrpAmount').value);
+            const xrpInDrops = Math.round(xrpAmount * 1_000_000);
+            const paymentURI = `xrpl:${sellerWalletAddress}?amount=${xrpInDrops}`;
             window.location.href = paymentURI;
         }
 
